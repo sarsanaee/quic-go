@@ -122,6 +122,7 @@ func parseGQUICFrame(r *bytes.Reader, typeByte byte, hdr *Header, v protocol.Ver
 		}
 		return frame, err
 	}
+	parsedFrame := true
 	switch typeByte {
 	case 0x1:
 		frame, err = parseRstStreamFrame(r, v)
@@ -149,6 +150,10 @@ func parseGQUICFrame(r *bytes.Reader, typeByte byte, hdr *Header, v protocol.Ver
 			err = qerr.Error(qerr.InvalidBlockedData, err.Error())
 		}
 	case 0x6:
+		if !v.UsesStopWaitingFrames() {
+			parsedFrame = false
+			break
+		}
 		frame, err = parseStopWaitingFrame(r, hdr.PacketNumber, hdr.PacketNumberLen, v)
 		if err != nil {
 			err = qerr.Error(qerr.InvalidStopWaitingData, err.Error())
@@ -156,6 +161,9 @@ func parseGQUICFrame(r *bytes.Reader, typeByte byte, hdr *Header, v protocol.Ver
 	case 0x7:
 		frame, err = parsePingFrame(r, v)
 	default:
+		parsedFrame = false
+	}
+	if !parsedFrame {
 		err = qerr.Error(qerr.InvalidFrameData, fmt.Sprintf("unknown type byte 0x%x", typeByte))
 	}
 	return frame, err
