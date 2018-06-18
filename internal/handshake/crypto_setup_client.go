@@ -80,6 +80,7 @@ func NewCryptoSetupClient(
 	negotiatedVersions []protocol.VersionNumber,
 	logger utils.Logger,
 ) (CryptoSetup, error) {
+	logger.Debugf("initialising client crypto setup with conn id %s", connID)
 	nullAEAD, err := crypto.NewNullAEAD(protocol.PerspectiveClient, connID, version)
 	if err != nil {
 		return nil, err
@@ -313,6 +314,8 @@ func (h *cryptoSetupClient) Open(dst, src []byte, packetNumber protocol.PacketNu
 		data, err := h.forwardSecureAEAD.Open(dst, src, packetNumber, associatedData)
 		if err == nil {
 			return data, protocol.EncryptionForwardSecure, nil
+		} else {
+			h.logger.Debugf("forward secure open err: %s", err)
 		}
 		return nil, protocol.EncryptionUnspecified, err
 	}
@@ -330,6 +333,7 @@ func (h *cryptoSetupClient) Open(dst, src []byte, packetNumber protocol.PacketNu
 	}
 	res, err := h.nullAEAD.Open(dst, src, packetNumber, associatedData)
 	if err != nil {
+		h.logger.Debugf("nullAEAD open err: %s", err)
 		return nil, protocol.EncryptionUnspecified, err
 	}
 	return res, protocol.EncryptionUnencrypted, nil

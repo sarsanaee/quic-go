@@ -70,7 +70,7 @@ type server struct {
 
 	sessionRunner sessionRunner
 	// set as a member, so they can be set in the tests
-	newSession func(connection, sessionRunner, protocol.VersionNumber, protocol.ConnectionID, *handshake.ServerConfig, *tls.Config, *Config, utils.Logger) (packetHandler, error)
+	newSession func(connection, sessionRunner, protocol.VersionNumber, protocol.ConnectionID, protocol.ConnectionID, *handshake.ServerConfig, *tls.Config, *Config, utils.Logger) (packetHandler, error)
 
 	logger utils.Logger
 }
@@ -412,6 +412,7 @@ func (s *server) handleGQUICPacket(hdr *wire.Header, packetData []byte, remoteAd
 			&conn{pconn: s.conn, currentAddr: remoteAddr},
 			s.sessionRunner,
 			version,
+			hdr.SrcConnectionID,
 			hdr.DestConnectionID,
 			s.scfg,
 			s.tlsConf,

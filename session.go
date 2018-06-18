@@ -151,7 +151,8 @@ func newSession(
 	conn connection,
 	sessionRunner sessionRunner,
 	v protocol.VersionNumber,
-	connectionID protocol.ConnectionID,
+	destConnID protocol.ConnectionID,
+	srcConnID protocol.ConnectionID,
 	scfg *handshake.ServerConfig,
 	tlsConf *tls.Config,
 	config *Config,
@@ -162,8 +163,8 @@ func newSession(
 	s := &session{
 		conn:           conn,
 		sessionRunner:  sessionRunner,
-		srcConnID:      connectionID,
-		destConnID:     connectionID,
+		destConnID:     destConnID,
+		srcConnID:      srcConnID,
 		perspective:    protocol.PerspectiveServer,
 		version:        v,
 		config:         config,
@@ -184,7 +185,7 @@ func newSession(
 	}
 	cs, err := newCryptoSetup(
 		s.cryptoStream,
-		connectionID,
+		destConnID,
 		s.conn.RemoteAddr(),
 		s.version,
 		divNonce,
@@ -204,8 +205,8 @@ func newSession(
 	s.streamsMap = newStreamsMapLegacy(s.newStream, s.config.MaxIncomingStreams, s.perspective)
 	s.streamFramer = newStreamFramer(s.cryptoStream, s.streamsMap, s.version)
 	s.packer = newPacketPacker(
-		connectionID,
-		connectionID,
+		destConnID,
+		srcConnID,
 		1,
 		s.sentPacketHandler.GetPacketNumberLen,
 		s.RemoteAddr(),
@@ -224,7 +225,8 @@ var newClientSession = func(
 	sessionRunner sessionRunner,
 	hostname string,
 	v protocol.VersionNumber,
-	connectionID protocol.ConnectionID,
+	destConnID protocol.ConnectionID,
+	srcConnID protocol.ConnectionID,
 	tlsConf *tls.Config,
 	config *Config,
 	initialVersion protocol.VersionNumber,
@@ -236,8 +238,8 @@ var newClientSession = func(
 	s := &session{
 		conn:           conn,
 		sessionRunner:  sessionRunner,
-		srcConnID:      connectionID,
-		destConnID:     connectionID,
+		srcConnID:      srcConnID,
+		destConnID:     destConnID,
 		perspective:    protocol.PerspectiveClient,
 		version:        v,
 		config:         config,
@@ -256,7 +258,7 @@ var newClientSession = func(
 	cs, err := newCryptoSetupClient(
 		s.cryptoStream,
 		hostname,
-		connectionID,
+		destConnID,
 		s.version,
 		tlsConf,
 		transportParams,
@@ -274,8 +276,8 @@ var newClientSession = func(
 	s.streamsMap = newStreamsMapLegacy(s.newStream, s.config.MaxIncomingStreams, s.perspective)
 	s.streamFramer = newStreamFramer(s.cryptoStream, s.streamsMap, s.version)
 	s.packer = newPacketPacker(
-		connectionID,
-		connectionID,
+		destConnID,
+		srcConnID,
 		1,
 		s.sentPacketHandler.GetPacketNumberLen,
 		s.RemoteAddr(),
@@ -609,6 +611,7 @@ func (s *session) handlePacketImpl(p *receivedPacket) error {
 	}
 	if s.perspective == protocol.PerspectiveClient {
 		if divNonce := p.header.DiversificationNonce; len(divNonce) > 0 {
+			s.logger.Debugf("Read diversification nonce: %#x\n", divNonce)
 			if err := s.cryptoStreamHandler.(divNonceSetter).SetDiversificationNonce(divNonce); err != nil {
 				return err
 			}

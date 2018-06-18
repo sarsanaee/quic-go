@@ -100,6 +100,14 @@ var _ = Describe("Version", func() {
 		Expect(VersionTLS.UsesIETFFrameFormat()).To(BeTrue())
 	})
 
+	It("tells if a version uses the IETF frame types", func() {
+		Expect(Version39.UsesIETFFrameFormat()).To(BeFalse())
+		Expect(Version42.UsesIETFFrameFormat()).To(BeFalse())
+		Expect(Version43.UsesIETFFrameFormat()).To(BeFalse())
+		Expect(Version44.UsesIETFFrameFormat()).To(BeTrue())
+		Expect(VersionTLS.UsesIETFFrameFormat()).To(BeTrue())
+	})
+
 	It("tells if a version uses STOP_WAITING frames", func() {
 		Expect(Version39.UsesStopWaitingFrames()).To(BeTrue())
 		Expect(Version42.UsesStopWaitingFrames()).To(BeTrue())

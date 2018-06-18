@@ -104,12 +104,17 @@ func DialContext(
 ) (Session, error) {
 	clientConfig := populateClientConfig(config)
 	version := clientConfig.Versions[0]
-	srcConnID, err := generateConnectionID()
-	if err != nil {
-		return nil, err
+	var srcConnID protocol.ConnectionID
+	if version != protocol.Version44 {
+		var err error
+		srcConnID, err = generateConnectionID()
+		if err != nil {
+			return nil, err
+		}
 	}
 	destConnID := srcConnID
-	if version.UsesTLS() {
+	if version.UsesTLS() || version == protocol.Version44 {
+		var err error
 		destConnID, err = generateConnectionID()
 		if err != nil {
 			return nil, err
@@ -121,6 +126,7 @@ func DialContext(
 		hostname = tlsConf.ServerName
 	}
 	if hostname == "" {
+		var err error
 		hostname, _, err = net.SplitHostPort(host)
 		if err != nil {
 			return nil, err
@@ -329,7 +335,7 @@ func (c *client) handlePacket(remoteAddr net.Addr, packet []byte) error {
 	rcvTime := time.Now()
 
 	r := bytes.NewReader(packet)
-	hdr, err := wire.ParseHeaderSentByServer(r)
+	hdr, err := wire.ParseHeaderSentByServer(r, c.version)
 	// drop the packet if we can't parse the header
 	if err != nil {
 		return fmt.Errorf("error parsing packet from %s: %s", remoteAddr.String(), err.Error())
@@ -370,15 +376,18 @@ func (c *client) handleIETFQUICPacket(hdr *wire.Header, packetData []byte, remot
 		return fmt.Errorf("received a packet with an unexpected connection ID (%s, expected %s)", hdr.DestConnectionID, c.srcConnID)
 	}
 	if hdr.IsLongHeader {
-		if hdr.Type != protocol.PacketTypeRetry && hdr.Type != protocol.PacketTypeHandshake {
+		if hdr.Type != protocol.PacketTypeRetry &&
+			hdr.Type != protocol.PacketTypeHandshake &&
+			hdr.Type != protocol.PacketType0RTT {
 			return fmt.Errorf("Received unsupported packet type: %s", hdr.Type)
 		}
-		c.logger.Debugf("len(packet data): %d, payloadLen: %d", len(packetData), hdr.PayloadLen)
-		if protocol.ByteCount(len(packetData)) < hdr.PayloadLen {
-			return fmt.Errorf("packet payload (%d bytes) is smaller than the expected payload length (%d bytes)", len(packetData), hdr.PayloadLen)
+		if hdr.Version.UsesLengthInHeader() {
+			if protocol.ByteCount(len(packetData)) < hdr.PayloadLen {
+				return fmt.Errorf("packet payload (%d bytes) is smaller than the expected payload length (%d bytes)", len(packetData), hdr.PayloadLen)
+			}
+			packetData = packetData[:int(hdr.PayloadLen)]
+			// TODO(#1312): implement parsing of compound packets
 		}
-		packetData = packetData[:int(hdr.PayloadLen)]
-		// TODO(#1312): implement parsing of compound packets
 	}
 
 	// this is the first packet we are receiving
@@ -482,6 +491,7 @@ func (c *client) createNewGQUICSession() (err error) {
 		c.hostname,
 		c.version,
 		c.destConnID,
+		c.srcConnID,
 		c.tlsConf,
 		c.config,
 		c.initialVersion,
