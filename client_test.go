@@ -107,8 +107,8 @@ var _ = Describe("Client", func() {
 
 		It("resolves the address", func() {
 			manager := NewMockPacketHandlerManager(mockCtrl)
+			manager.EXPECT().Add(connID, gomock.Any())
 			mockMultiplexer.EXPECT().AddConn(gomock.Any(), gomock.Any()).Return(manager, nil)
-			mockMultiplexer.EXPECT().AddHandler(gomock.Any(), gomock.Any(), gomock.Any())
 
 			if os.Getenv("APPVEYOR") == "True" {
 				Skip("This test is flaky on AppVeyor.")
@@ -138,8 +138,8 @@ var _ = Describe("Client", func() {
 
 		It("uses the tls.Config.ServerName as the hostname, if present", func() {
 			manager := NewMockPacketHandlerManager(mockCtrl)
+			manager.EXPECT().Add(connID, gomock.Any())
 			mockMultiplexer.EXPECT().AddConn(gomock.Any(), gomock.Any()).Return(manager, nil)
-			mockMultiplexer.EXPECT().AddHandler(gomock.Any(), gomock.Any(), gomock.Any())
 
 			hostnameChan := make(chan string, 1)
 			newClientSession = func(
@@ -166,8 +166,8 @@ var _ = Describe("Client", func() {
 
 		It("returns after the handshake is complete", func() {
 			manager := NewMockPacketHandlerManager(mockCtrl)
+			manager.EXPECT().Add(connID, gomock.Any())
 			mockMultiplexer.EXPECT().AddConn(packetConn, gomock.Any()).Return(manager, nil)
-			mockMultiplexer.EXPECT().AddHandler(packetConn, gomock.Any(), gomock.Any())
 
 			run := make(chan struct{})
 			newClientSession = func(
@@ -195,8 +195,8 @@ var _ = Describe("Client", func() {
 
 		It("returns an error that occurs while waiting for the connection to become secure", func() {
 			manager := NewMockPacketHandlerManager(mockCtrl)
+			manager.EXPECT().Add(connID, gomock.Any())
 			mockMultiplexer.EXPECT().AddConn(packetConn, gomock.Any()).Return(manager, nil)
-			mockMultiplexer.EXPECT().AddHandler(packetConn, gomock.Any(), gomock.Any())
 
 			testErr := errors.New("early handshake error")
 			newClientSession = func(
@@ -222,8 +222,8 @@ var _ = Describe("Client", func() {
 
 		It("closes the session when the context is canceled", func() {
 			manager := NewMockPacketHandlerManager(mockCtrl)
+			manager.EXPECT().Add(connID, gomock.Any())
 			mockMultiplexer.EXPECT().AddConn(packetConn, gomock.Any()).Return(manager, nil)
-			mockMultiplexer.EXPECT().AddHandler(packetConn, gomock.Any(), gomock.Any())
 
 			sessionRunning := make(chan struct{})
 			defer close(sessionRunning)
@@ -261,9 +261,9 @@ var _ = Describe("Client", func() {
 
 		It("removes closed sessions from the multiplexer", func() {
 			manager := NewMockPacketHandlerManager(mockCtrl)
+			manager.EXPECT().Add(connID, gomock.Any())
 			manager.EXPECT().Remove(connID)
 			mockMultiplexer.EXPECT().AddConn(packetConn, gomock.Any()).Return(manager, nil)
-			mockMultiplexer.EXPECT().AddHandler(packetConn, gomock.Any(), gomock.Any())
 
 			var runner sessionRunner
 			sess := NewMockQuicSession(mockCtrl)
@@ -362,8 +362,8 @@ var _ = Describe("Client", func() {
 		Context("gQUIC", func() {
 			It("errors if it can't create a session", func() {
 				manager := NewMockPacketHandlerManager(mockCtrl)
+				manager.EXPECT().Add(connID, gomock.Any())
 				mockMultiplexer.EXPECT().AddConn(packetConn, gomock.Any()).Return(manager, nil)
-				mockMultiplexer.EXPECT().AddHandler(packetConn, gomock.Any(), gomock.Any())
 
 				testErr := errors.New("error creating session")
 				newClientSession = func(
@@ -388,8 +388,8 @@ var _ = Describe("Client", func() {
 		Context("IETF QUIC", func() {
 			It("creates new TLS sessions with the right parameters", func() {
 				manager := NewMockPacketHandlerManager(mockCtrl)
+				manager.EXPECT().Add(connID, gomock.Any())
 				mockMultiplexer.EXPECT().AddConn(packetConn, gomock.Any()).Return(manager, nil)
-				mockMultiplexer.EXPECT().AddHandler(packetConn, gomock.Any(), gomock.Any())
 
 				config := &Config{Versions: []protocol.VersionNumber{protocol.VersionTLS}}
 				c := make(chan struct{})
@@ -444,8 +444,8 @@ var _ = Describe("Client", func() {
 
 			It("returns an error that occurs during version negotiation", func() {
 				manager := NewMockPacketHandlerManager(mockCtrl)
+				manager.EXPECT().Add(connID, gomock.Any())
 				mockMultiplexer.EXPECT().AddConn(packetConn, gomock.Any()).Return(manager, nil)
-				mockMultiplexer.EXPECT().AddHandler(packetConn, gomock.Any(), gomock.Any())
 
 				testErr := errors.New("early handshake error")
 				newClientSession = func(
@@ -485,7 +485,9 @@ var _ = Describe("Client", func() {
 			})
 
 			It("changes the version after receiving a version negotiation packet", func() {
-				mockMultiplexer.EXPECT().AddHandler(gomock.Any(), gomock.Any(), gomock.Any())
+				phm := NewMockPacketHandlerManager(mockCtrl)
+				phm.EXPECT().Add(connID, gomock.Any())
+				cl.packetHandlers = phm
 
 				version1 := protocol.Version39
 				version2 := protocol.Version39 + 1
@@ -528,8 +530,9 @@ var _ = Describe("Client", func() {
 			})
 
 			It("only accepts one version negotiation packet", func() {
-				mockMultiplexer.EXPECT().AddHandler(gomock.Any(), gomock.Any(), gomock.Any())
-
+				phm := NewMockPacketHandlerManager(mockCtrl)
+				phm.EXPECT().Add(connID, gomock.Any())
+				cl.packetHandlers = phm
 				version1 := protocol.Version39
 				version2 := protocol.Version39 + 1
 				version3 := protocol.Version39 + 2
@@ -595,7 +598,10 @@ var _ = Describe("Client", func() {
 			})
 
 			It("changes to the version preferred by the quic.Config", func() {
-				mockMultiplexer.EXPECT().AddHandler(gomock.Any(), gomock.Any(), gomock.Any())
+				phm := NewMockPacketHandlerManager(mockCtrl)
+				phm.EXPECT().Add(connID, gomock.Any())
+				cl.packetHandlers = phm
+
 				sess := NewMockQuicSession(mockCtrl)
 				sess.EXPECT().destroy(errCloseSessionForNewVersion)
 				cl.session = sess
@@ -674,8 +680,8 @@ var _ = Describe("Client", func() {
 
 	It("creates new gQUIC sessions with the right parameters", func() {
 		manager := NewMockPacketHandlerManager(mockCtrl)
+		manager.EXPECT().Add(gomock.Any(), gomock.Any())
 		mockMultiplexer.EXPECT().AddConn(packetConn, gomock.Any()).Return(manager, nil)
-		mockMultiplexer.EXPECT().AddHandler(packetConn, gomock.Any(), gomock.Any())
 
 		config := &Config{Versions: protocol.SupportedVersions}
 		c := make(chan struct{})
@@ -688,7 +694,7 @@ var _ = Describe("Client", func() {
 			_ sessionRunner,
 			hostnameP string,
 			versionP protocol.VersionNumber,
-			_ protocol.ConnectionID,
+			connIDP protocol.ConnectionID,
 			_ *tls.Config,
 			configP *Config,
 			_ protocol.VersionNumber,
@@ -699,11 +705,13 @@ var _ = Describe("Client", func() {
 			hostname = hostnameP
 			version = versionP
 			conf = configP
+			connID = connIDP
 			close(c)
 			sess := NewMockQuicSession(mockCtrl)
 			sess.EXPECT().run()
 			return sess, nil
 		}
+
 		_, err := Dial(packetConn, addr, "quic.clemente.io:1337", nil, config)
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(c).Should(BeClosed())
@@ -715,8 +723,8 @@ var _ = Describe("Client", func() {
 
 	It("creates a new session when the server performs a retry", func() {
 		manager := NewMockPacketHandlerManager(mockCtrl)
+		manager.EXPECT().Add(gomock.Any(), gomock.Any())
 		mockMultiplexer.EXPECT().AddConn(packetConn, gomock.Any()).Return(manager, nil)
-		mockMultiplexer.EXPECT().AddHandler(packetConn, gomock.Any(), gomock.Any())
 
 		config := &Config{Versions: []protocol.VersionNumber{protocol.VersionTLS}}
 		cl.config = config
@@ -749,8 +757,8 @@ var _ = Describe("Client", func() {
 
 	It("only accepts one Retry packet", func() {
 		manager := NewMockPacketHandlerManager(mockCtrl)
+		manager.EXPECT().Add(gomock.Any(), gomock.Any())
 		mockMultiplexer.EXPECT().AddConn(packetConn, gomock.Any()).Return(manager, nil)
-		mockMultiplexer.EXPECT().AddHandler(packetConn, gomock.Any(), gomock.Any())
 
 		config := &Config{Versions: []protocol.VersionNumber{protocol.VersionTLS}}
 		sess1 := NewMockQuicSession(mockCtrl)
