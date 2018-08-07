@@ -1,6 +1,7 @@
 package ackhandler
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"time"
@@ -403,7 +404,6 @@ func (h *sentPacketHandler) OnAlarm() error {
 		}
 		h.rtoCount++
 		h.numRTOs += 2
-		err = h.queueRTOs()
 	}
 	if err != nil {
 		return err
@@ -498,6 +498,19 @@ func (h *sentPacketHandler) DequeuePacketForRetransmission() *Packet {
 	return packet
 }
 
+func (h *sentPacketHandler) DequeueProbePacket() (*Packet, error) {
+	if len(h.retransmissionQueue) == 0 {
+		p := h.packetHistory.FirstOutstanding()
+		if p == nil {
+			return nil, errors.New("cannot dequeue a probe packet. No outstanding packets")
+		}
+		if err := h.queuePacketForRetransmission(p); err != nil {
+			return nil, err
+		}
+	}
+	return h.DequeuePacketForRetransmission(), nil
+}
+
 func (h *sentPacketHandler) GetPacketNumberLen(p protocol.PacketNumber) protocol.PacketNumberLen {
 	return protocol.GetPacketNumberLengthForHeader(p, h.lowestUnacked(), h.version)
 }
@@ -559,22 +572,6 @@ func (h *sentPacketHandler) ShouldSendNumPackets() int {
 		return 1
 	}
 	return int(math.Ceil(float64(protocol.MinPacingDelay) / float64(delay)))
-}
-
-// retransmit the oldest two packets
-func (h *sentPacketHandler) queueRTOs() error {
-	// Queue the first two outstanding packets for retransmission.
-	// This does NOT declare this packets as lost:
-	// They are still tracked in the packet history and count towards the bytes in flight.
-	for i := 0; i < 2; i++ {
-		if p := h.packetHistory.FirstOutstanding(); p != nil {
-			h.logger.Debugf("Queueing packet %#x for retransmission (RTO)", p.PacketNumber)
-			if err := h.queuePacketForRetransmission(p); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
 
 func (h *sentPacketHandler) queueHandshakePacketsForRetransmission() error {
