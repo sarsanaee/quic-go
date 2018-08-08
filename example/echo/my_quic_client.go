@@ -14,11 +14,14 @@ import (
 	"math/big"
 	mrand "math/rand"
 	"time"
+	"os"
+        "strconv"
+
 
 	quic "github.com/lucas-clemente/quic-go"
 )
 
-const addr = "localhost:4242"
+const addr = "10.254.254.1:4242"
 const callpersec = 500
 const message = "foobar"
 
@@ -27,11 +30,16 @@ const message = "foobar"
 func main() {
 	//go func() { log.Fatal(echoServer()) }()
 
+        args := os.Args[1:]
+        rate_int, err := strconv.Atoi(args[0])
+	var rate float64 = float64(rate_int)
+
+
 	mrand.Seed(time.Now().UnixNano()) //generating a new seed but
 	//I guess it should be a number in all the experiments.
 	//fmt.Println(nextTime(100.0))
 
-	err := clientMain()
+	err = clientMain(rate)
 	if err != nil {
 		log.Fatal(err)
 		panic(err)
@@ -42,8 +50,8 @@ func nextTime(rate float64) float64 {
 	return -1 * math.Log(1.0-mrand.Float64()) / rate
 }
 
-func clientWrite(stream quic.Stream, err error) error {
-	var my_random_number float64 = nextTime(callpersec) * 1000000
+func clientWrite(stream quic.Stream, rate float64, err error) error {
+	var my_random_number float64 = nextTime(rate) * 1000000
 	var my_random_int int = int(my_random_number)
 	var int_message int64 = time.Now().UnixNano()
 	byte_message := make([]byte, 8)
@@ -79,7 +87,7 @@ func clientRead(stream quic.Stream, err error) error {
 	return err
 }
 
-func clientMain() error {
+func clientMain(rate float64) error {
 	session, err := quic.DialAddr(addr, &tls.Config{InsecureSkipVerify: true}, nil)
 	if err != nil {
 		return err
@@ -91,7 +99,7 @@ func clientMain() error {
 	}
 	go clientRead(stream, err)
 
-	clientWrite(stream, err)
+	clientWrite(stream, rate , err)
 
 	// for true {
 	// 	fmt.Printf("Client: Sending '%s'\n", message)
