@@ -1,21 +1,22 @@
-
 package main
 
 import (
-	"crypto/rand"
+	rand "crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"io"
-	"log"
+	"math"
 	"math/big"
+	mrand "math/rand"
+	"time"
 
 	quic "github.com/lucas-clemente/quic-go"
 )
 
-const addr = "localhost:4242"
+const addr = "0.0.0.0:4242"
 
 const message = "foobar"
 
@@ -24,66 +25,73 @@ const message = "foobar"
 func main() {
 	//go func() { log.Fatal(echoServer()) }()
 
+	//fmt.Println(time.Microsecond * nextTime(100.0) * 1000000)
 
+	//time.Sleep(nextTime(100.0) * 1000000)
+
+	//fmt.Println(nextTime(1000.0))
+	echoServer()
 	//err := clientMain()
-	err := echoServer()
-	if err != nil {
-		log.Fatal(err)
-		panic(err)
+	// err := echoServer()
+	// if err != nil {
+	// 	log.Fatal(err)
+	// 	panic(err)
+	// }
+}
+
+func nextTime(rate float64) float64 {
+	return -1 * math.Log(1.0-mrand.Float64()) / rate
+}
+
+func echoStream(sess quic.Session) {
+	for true {
+		stream, err := sess.AcceptStream()
+		if err != nil {
+			panic(err)
+			break
+		}
+		// Echo through the loggingWriter
+		fmt.Println("before IO")
+		_, err = io.Copy(loggingWriter{stream}, stream)
+		fmt.Println("after IO")
+		//return err
 	}
 }
 
 // Start a server that echos all data on the first stream opened by the client
-func echoServer() error {
+func echoServer() {
+
 	listener, err := quic.ListenAddr(addr, generateTLSConfig(), nil)
-	if err != nil {
-		return err
-	}
-	sess, err := listener.Accept()
-	if err != nil {
-		return err
-	}
-	stream, err := sess.AcceptStream()
-	if err != nil {
-		panic(err)
-	}
-	// Echo through the loggingWriter
-	_, err = io.Copy(loggingWriter{stream}, stream)
-	return err
-}
+	fmt.Println("after listener")
 
-func clientMain() error {
-	session, err := quic.DialAddr(addr, &tls.Config{InsecureSkipVerify: true}, nil)
-	if err != nil {
-		return err
-	}
+	for true {
 
-	stream, err := session.OpenStreamSync()
-	if err != nil {
-		return err
-	}
+		if err != nil {
+			//return err
+			break
+		}
 
-	fmt.Printf("Client: Sending '%s'\n", message)
-	_, err = stream.Write([]byte(message))
-	if err != nil {
-		return err
-	}
+		fmt.Println("before accept")
+		sess, err := listener.Accept()
+		fmt.Println("after accept")
+		if err != nil {
+			//return err
+			break
+		}
 
-	buf := make([]byte, len(message))
-	_, err = io.ReadFull(stream, buf)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("Client: Got '%s'\n", buf)
+		go echoStream(sess)
 
-	return nil
+	}
+	return
+	//return err
 }
 
 // A wrapper for io.Writer that also logs the message.
 type loggingWriter struct{ io.Writer }
 
 func (w loggingWriter) Write(b []byte) (int, error) {
-	fmt.Printf("Server: Got '%s'\n", string(b))
+	//fmt.Printf("Server: Got '%s'\n", string(b))##########################
+	time.Sleep(time.Microsecond * 10) //time.Duration(nextTime(.0)))
 	return w.Writer.Write(b)
 }
 

@@ -1,16 +1,19 @@
-
 package main
 
 import (
-	"crypto/rand"
+	rand "crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/binary"
 	"encoding/pem"
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"math/big"
+	mrand "math/rand"
+	"time"
 
 	quic "github.com/lucas-clemente/quic-go"
 )
@@ -24,6 +27,9 @@ const message = "foobar"
 func main() {
 	//go func() { log.Fatal(echoServer()) }()
 
+	mrand.Seed(time.Now().UnixNano()) //generating a new seed but I guess it should be a number in all the experiments.
+	//fmt.Println(nextTime(100.0))
+
 	err := clientMain()
 	if err != nil {
 		log.Fatal(err)
@@ -31,25 +37,56 @@ func main() {
 	}
 }
 
-// Start a server that echos all data on the first stream opened by the client
-func echoServer() error {
-	listener, err := quic.ListenAddr(addr, generateTLSConfig(), nil)
-	if err != nil {
-		return err
+func nextTime(rate float64) float64 {
+	return -1 * math.Log(1.0-mrand.Float64()) / rate
+}
+
+func clientWrite(stream quic.Stream, err error) error {
+	var my_random_number float64 = nextTime(10000) * 1000000
+	var my_random_int int = int(my_random_number)
+	var int_message int64 = time.Now().UnixNano()
+	byte_message := make([]byte, 8)
+	for true {
+
+		time.Sleep(time.Microsecond * time.Duration(my_random_int))
+		int_message = time.Now().UnixNano()
+		binary.LittleEndian.PutUint64(byte_message, uint64(int_message))
+		// _, err = stream.Write([]byte(byte_message))
+		//fmt.Println("Send", byte_message, int_message)
+		_, err = stream.Write(byte_message)
+
+		if err != nil {
+			return err
+		}
+
 	}
-	sess, err := listener.Accept()
-	if err != nil {
-		return err
-	}
-	stream, err := sess.AcceptStream()
-	if err != nil {
-		panic(err)
-	}
-	// Echo through the loggingWriter
-	_, err = io.Copy(loggingWriter{stream}, stream)
 	return err
 }
 
+func clientRead(stream quic.Stream, err error) error {
+	for true {
+		//fmt.Println(len(message))
+		buf := make([]byte, 8) //len(message))
+
+		_, err = io.ReadFull(stream, buf)
+		now := time.Now().UnixNano()
+		//fmt.Println(len(buf))
+
+		if err != nil {
+			return err
+		}
+
+		last := int64(binary.LittleEndian.Uint64(buf))
+
+		fmt.Println((now - last) / 1000)
+		//fmt.Println("Recv", buf, last)
+		// fmt.Println(last - now)
+		// fmt.Println()
+
+		//fmt.Printf("Client: Got '%s'\n", buf) ######################
+	}
+	return err
+}
 func clientMain() error {
 	session, err := quic.DialAddr(addr, &tls.Config{InsecureSkipVerify: true}, nil)
 	if err != nil {
@@ -61,18 +98,24 @@ func clientMain() error {
 		return err
 	}
 
-	fmt.Printf("Client: Sending '%s'\n", message)
-	_, err = stream.Write([]byte(message))
-	if err != nil {
-		return err
-	}
+	go clientWrite(stream, err)
 
-	buf := make([]byte, len(message))
-	_, err = io.ReadFull(stream, buf)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("Client: Got '%s'\n", buf)
+	clientRead(stream, err)
+
+	// for true {
+	// 	fmt.Printf("Client: Sending '%s'\n", message)
+	// 	_, err = stream.Write([]byte(message))
+	// 	if err != nil {
+	// 		return err
+	// 	}
+
+	// 	buf := make([]byte, len(message))
+	// 	_, err = io.ReadFull(stream, buf)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	fmt.Printf("Client: Got '%s'\n", buf)
+	// }
 
 	return nil
 }
@@ -81,7 +124,7 @@ func clientMain() error {
 type loggingWriter struct{ io.Writer }
 
 func (w loggingWriter) Write(b []byte) (int, error) {
-	fmt.Printf("Server: Got '%s'\n", string(b))
+	//fmt.Printf("Server: Got '%s'\n", string(b))
 	return w.Writer.Write(b)
 }
 
