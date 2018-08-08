@@ -19,7 +19,7 @@ import (
 )
 
 const addr = "localhost:4242"
-
+const callpersec = 500
 const message = "foobar"
 
 // We start a server echoing data on the first stream the client opens,
@@ -27,7 +27,8 @@ const message = "foobar"
 func main() {
 	//go func() { log.Fatal(echoServer()) }()
 
-	mrand.Seed(time.Now().UnixNano()) //generating a new seed but I guess it should be a number in all the experiments.
+	mrand.Seed(time.Now().UnixNano()) //generating a new seed but
+	//I guess it should be a number in all the experiments.
 	//fmt.Println(nextTime(100.0))
 
 	err := clientMain()
@@ -42,7 +43,7 @@ func nextTime(rate float64) float64 {
 }
 
 func clientWrite(stream quic.Stream, err error) error {
-	var my_random_number float64 = nextTime(10000) * 1000000
+	var my_random_number float64 = nextTime(callpersec) * 1000000
 	var my_random_int int = int(my_random_number)
 	var int_message int64 = time.Now().UnixNano()
 	byte_message := make([]byte, 8)
@@ -64,29 +65,20 @@ func clientWrite(stream quic.Stream, err error) error {
 }
 
 func clientRead(stream quic.Stream, err error) error {
+	buf := make([]byte, 8) //len(message))
 	for true {
-		//fmt.Println(len(message))
-		buf := make([]byte, 8) //len(message))
-
 		_, err = io.ReadFull(stream, buf)
 		now := time.Now().UnixNano()
-		//fmt.Println(len(buf))
 
 		if err != nil {
 			return err
 		}
-
 		last := int64(binary.LittleEndian.Uint64(buf))
-
 		fmt.Println((now - last) / 1000)
-		//fmt.Println("Recv", buf, last)
-		// fmt.Println(last - now)
-		// fmt.Println()
-
-		//fmt.Printf("Client: Got '%s'\n", buf) ######################
 	}
 	return err
 }
+
 func clientMain() error {
 	session, err := quic.DialAddr(addr, &tls.Config{InsecureSkipVerify: true}, nil)
 	if err != nil {
@@ -97,10 +89,9 @@ func clientMain() error {
 	if err != nil {
 		return err
 	}
+	go clientRead(stream, err)
 
-	go clientWrite(stream, err)
-
-	clientRead(stream, err)
+	clientWrite(stream, err)
 
 	// for true {
 	// 	fmt.Printf("Client: Sending '%s'\n", message)
@@ -148,3 +139,4 @@ func generateTLSConfig() *tls.Config {
 	}
 	return &tls.Config{Certificates: []tls.Certificate{tlsCert}}
 }
+

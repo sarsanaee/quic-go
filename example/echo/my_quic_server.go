@@ -44,17 +44,36 @@ func nextTime(rate float64) float64 {
 }
 
 func echoStream(sess quic.Session) {
+
+	stream, err := sess.AcceptStream()
+	// Alireza Read
+	// buf := make([]byte, 8) //len(message))
+
+	if err != nil {
+		panic(err)
+	}
+
 	for true {
-		stream, err := sess.AcceptStream()
-		if err != nil {
-			panic(err)
-			break
-		}
+
 		// Echo through the loggingWriter
-		fmt.Println("before IO")
 		_, err = io.Copy(loggingWriter{stream}, stream)
-		fmt.Println("after IO")
-		//return err
+
+		// Alireza Read
+		// _, err = stream.Read(buf)
+		// // _, err = io.ReadFull(stream, buf)
+
+		// if err != nil {
+		// 	panic(err)
+		// }
+
+		// time.Sleep(time.Microsecond * 10)
+		// _, err = stream.Write(buf)
+
+		// if err != nil {
+		// 	panic(err)
+		// }
+		// Alireza Read
+
 	}
 }
 
@@ -71,9 +90,7 @@ func echoServer() {
 			break
 		}
 
-		fmt.Println("before accept")
 		sess, err := listener.Accept()
-		fmt.Println("after accept")
 		if err != nil {
 			//return err
 			break
@@ -115,3 +132,4 @@ func generateTLSConfig() *tls.Config {
 	}
 	return &tls.Config{Certificates: []tls.Certificate{tlsCert}}
 }
+
