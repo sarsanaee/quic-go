@@ -13,10 +13,9 @@ import (
 	"math"
 	"math/big"
 	mrand "math/rand"
-	"time"
 	"os"
-        "strconv"
-
+	"strconv"
+	"time"
 
 	quic "github.com/lucas-clemente/quic-go"
 )
@@ -30,10 +29,9 @@ const message = "foobar"
 func main() {
 	//go func() { log.Fatal(echoServer()) }()
 
-        args := os.Args[1:]
-        rate_int, err := strconv.Atoi(args[0])
+	args := os.Args[1:]
+	rate_int, err := strconv.Atoi(args[0])
 	var rate float64 = float64(rate_int)
-
 
 	mrand.Seed(time.Now().UnixNano()) //generating a new seed but
 	//I guess it should be a number in all the experiments.
@@ -57,6 +55,8 @@ func clientWrite(stream quic.Stream, rate float64, err error) error {
 	byte_message := make([]byte, 8)
 	for true {
 
+		my_random_number = nextTime(rate) * 1000000
+		my_random_int = int(my_random_number)
 		time.Sleep(time.Microsecond * time.Duration(my_random_int))
 		int_message = time.Now().UnixNano()
 		binary.LittleEndian.PutUint64(byte_message, uint64(int_message))
@@ -99,7 +99,7 @@ func clientMain(rate float64) error {
 	}
 	go clientRead(stream, err)
 
-	clientWrite(stream, rate , err)
+	clientWrite(stream, rate, err)
 
 	// for true {
 	// 	fmt.Printf("Client: Sending '%s'\n", message)
@@ -147,4 +147,3 @@ func generateTLSConfig() *tls.Config {
 	}
 	return &tls.Config{Certificates: []tls.Certificate{tlsCert}}
 }
-
