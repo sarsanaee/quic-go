@@ -20,7 +20,7 @@ import (
 	quic "github.com/lucas-clemente/quic-go"
 )
 
-const addr = "10.254.254.1:4242"
+const addr = "10.254.254.239:4242"
 const callpersec = 500
 const message = "foobar"
 
