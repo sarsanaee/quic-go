@@ -154,7 +154,6 @@ func clientMain(cmdRateInt float64, serverIP string, cmdPort string) error {
 		var rtt int64
 		var latency string
 
-		myPrint(latency)
 		buf := make([]byte, 8)
 		for {
 			if !syncFlag {
@@ -179,10 +178,6 @@ func clientMain(cmdRateInt float64, serverIP string, cmdPort string) error {
 	}(stream)
 
 	for {
-
-		if !syncFlag {
-			break
-		}
 
 		wait := time.Microsecond * time.Duration(nextTime(cmdRateInt)*1000000)
 		if wait > 0 {

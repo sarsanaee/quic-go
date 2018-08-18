@@ -12,4 +12,8 @@ do
 	./run.sh $i 10.254.254.239 ~/quic_results/quic 30 $4
 done
 
-python3 draw_plot.py 1000 300000 $1 $3 $2 ~/quic_results/quic/1000
+source venv/bin/activate
+
+python3 draw_plot.py 1 300000 $1 $3 $2 ~/quic_results/quic/$4
+
+deactivate
