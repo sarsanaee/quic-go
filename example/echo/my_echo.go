@@ -262,7 +262,7 @@ func writeThroughput(throughput int64, rate float64) {
 
 	defer f.Close()
 
-	_, err = f.WriteString(strconv.Itoa(int(throughput)))
+	_, err = f.WriteString(strconv.Itoa(int(throughput)) + "\n")
 
 	if err != nil {
 		panic(err)
