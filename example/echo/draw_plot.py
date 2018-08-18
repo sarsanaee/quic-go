@@ -44,7 +44,10 @@ mylist = []
 for i in range(start, end + 1, increament):
 	#print(i)
 	mylist.append(str(i))
-	throughputs_quic.append(i/1000)# * 10000)
+	# throughputs_quic.append(i/1000)# * 10000)
+
+throughputs_quic = np.genfromtxt("../" + path + '/' + 'throughputs.log')
+throughputs_quic = throughputs_quic / 10^6
 
 for i in mylist:
 	try:
