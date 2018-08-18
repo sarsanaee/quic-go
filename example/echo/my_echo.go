@@ -14,6 +14,7 @@ import (
 	"math"
 	"math/big"
 	mrand "math/rand"
+	"os"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -24,6 +25,8 @@ import (
 const addr = "localhost:4242"
 
 const message = "foobar"
+
+const filename = "~/quic_results/throughputs.txt"
 
 var total_rcv int64
 var syncFlag bool
@@ -62,8 +65,19 @@ func main() {
 		<-time.After(time.Second * time.Duration(expTime))
 		syncFlag = false
 		<-time.After(time.Second * time.Duration(expTime))
-		fmt.Println("total exchanged:", total_rcv, "\nthroughput:",
-			total_rcv*1000000000/time.Now().Sub(t1).Nanoseconds(), "call/sec")
+		// fmt.Println("total exchanged:", total_rcv, "\nthroughput:",
+		// 	total_rcv*1000000000/time.Now().Sub(t1).Nanoseconds(), "call/sec")
+
+		f, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0600)
+		if err != nil {
+			panic(err)
+		}
+
+		defer f.Close()
+
+		if _, err = f.WriteString(total_rcv * 1000000000 / time.Now().Sub(t1).Nanoseconds()); err != nil {
+			panic(err)
+		}
 	}
 	// go func() { log.Fatal(echoServer()) }()
 
