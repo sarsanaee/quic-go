@@ -63,9 +63,12 @@ for i in dataset_quic:
 	#print(percentile)
 
 
-print(mylist)
-print(len(throughputs_quic))
-print(len(percentile_set_quic))
+try:
+	print(mylist)
+	print(len(throughputs_quic))
+	print(len(percentile_set_quic))
+except:
+	print("you are trying use len function for one number")
 '''
 path = "/home/alireza/Documents/quic_results/tcp"
 files = os.listdir(path)
