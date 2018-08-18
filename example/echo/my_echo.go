@@ -26,7 +26,7 @@ const addr = "localhost:4242"
 
 const message = "foobar"
 
-const filename = "/home/alireza/quic_results/throughputs.txt"
+const filename = "/home/alireza/quic_results/quic/"
 
 var total_rcv int64
 var syncFlag bool
@@ -67,7 +67,7 @@ func main() {
 		<-time.After(time.Second * time.Duration(expTime))
 		// fmt.Println("total exchanged:", total_rcv, "\nthroughput:",
 		// 	total_rcv*1000000000/time.Now().Sub(t1).Nanoseconds(), "call/sec")
-		writeThroughput(total_rcv * 1000000000 / time.Now().Sub(t1).Nanoseconds())
+		writeThroughput(total_rcv*1000000000/time.Now().Sub(t1).Nanoseconds(), cmdRateInt)
 	}
 	// go func() { log.Fatal(echoServer()) }()
 
@@ -248,10 +248,10 @@ func myPrint(latency_series string) {
 	fmt.Print(latency_series)
 }
 
-func writeThroughput(throughput int64) {
+func writeThroughput(throughput int64, rate int) {
 	f, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
-		f, err := os.Create(filename)
+		f, err := os.Create(filename + strconv.Itoa(rate) + "/throughputs.txt")
 		if err != nil {
 			panic(err)
 		}
