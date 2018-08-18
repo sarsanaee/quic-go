@@ -1,3 +1,5 @@
 debug
 debug.test
 main
+example/echo/venv/*
+example/echo/plots/*
