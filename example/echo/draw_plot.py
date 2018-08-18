@@ -100,7 +100,7 @@ plt.xlabel('Throughput(MRPS)')
 plt.ylabel('Latency at $99^{th}$(us)')
 plt.setp(p, linewidth=2.0)
 plt.grid(True, which='both')
-plt.savefig('plots/tcp_zoom.png', format='png', dpi=300)
+plt.savefig('plots/quic.png', format='png', dpi=300)
 #plt.show()
 
 '''
