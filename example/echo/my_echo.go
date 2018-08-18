@@ -75,7 +75,7 @@ func main() {
 
 		defer f.Close()
 
-		if _, err = f.WriteString(total_rcv * 1000000000 / time.Now().Sub(t1).Nanoseconds()); err != nil {
+		if _, err = f.WriteString(strconv.Itoa(total_rcv * 1000000000 / time.Now().Sub(t1).Nanoseconds()); err != nil {
 			panic(err)
 		}
 	}
