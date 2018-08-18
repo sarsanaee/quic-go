@@ -249,7 +249,7 @@ func myPrint(latency_series string) {
 }
 
 func writeThroughput(throughput int64, rate float64) {
-	curFileName = filename + strconv.Itoa(int(rate)) + "/throughputs.txt"
+	curFileName := filename + strconv.Itoa(int(rate)) + "/throughputs.txt"
 	f, err := os.OpenFile(curFileName, os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
 		f, err := os.Create(curFileName)
